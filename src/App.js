@@ -11,6 +11,9 @@ function App() {
     occupation: ''
   });
   
+  const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState(false);
+
   const [scores, setScores] = useState({
     head: { E: 0, O: 0, P: 0, M: 0, R: 0 },
     eyes: { E: 0, O: 0, P: 0, M: 0, R: 0 },
@@ -141,7 +144,7 @@ function App() {
 
   // Function removed - not currently used but kept for future functionality
 
- const handleSubmit = async () => {
+ const handleSubmit = () => {
   const results = calculateResults();
   
   const payload = {
@@ -152,34 +155,23 @@ function App() {
     scores: results.totals,
     percentages: results.percentages
   };
-  
-  // SUBSTITUA ESTA URL PELA SUA URL DO GOOGLE APPS SCRIPT
+
   const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbwrBAFXjXDeG30ZpBhnmve03HG_N0e2LChiuiD7B__KXLSvIBy_VhTIJTTB9MVc3jrr/exec';
-  
-  // Log para debug
-  console.log('Enviando dados:', payload);
-  console.log('URL:', GOOGLE_SCRIPT_URL);
-  
-  try {
-    const response = await fetch(GOOGLE_SCRIPT_URL, {
-      method: 'POST',
-      mode: 'no-cors',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
-    });
-    
-    console.log('Resposta:', response);
-    
-    // Com mode: 'no-cors', não podemos ler a resposta
-    // Então assumimos que funcionou se não deu erro
-    alert('✅ Assessment submitted successfully!\n\nCheck your email for your free character blueprint report.');
-    
-  } catch (error) {
-    console.error('Erro completo:', error);
-    alert('❌ There was an error submitting your assessment.\n\nError: ' + error.message + '\n\nPlease try again.');
-  }
+
+  // Avança para a tela de resultados IMEDIATAMENTE, sem esperar o Sheets
+  setCurrentSection(prev => prev + 1);
+  setSubmitted(true);
+
+  // Envia os dados em segundo plano (fire and forget)
+  fetch(GOOGLE_SCRIPT_URL, {
+    method: 'POST',
+    mode: 'no-cors',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  }).catch(error => {
+    console.error('Erro ao enviar para Google Sheets:', error);
+    setSubmitError(true);
+  });
 };
 
   const renderPersonalInfo = () => (
@@ -461,7 +453,7 @@ function App() {
           <div className="flex justify-between items-center pt-6 border-t border-gray-200">
             <button
               onClick={() => setCurrentSection(prev => Math.max(0, prev - 1))}
-              disabled={currentSection === 0}
+              disabled={currentSection === 0 || submitted}
               className="px-6 py-2 border border-gray-300 rounded-lg font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
             >
               Previous
@@ -469,19 +461,23 @@ function App() {
             
             {currentSection < sections.length - 1 ? (
               <button
-                onClick={() => setCurrentSection(prev => prev + 1)}
+                onClick={() => {
+                  // Se é a última seção antes dos resultados, dispara o submit junto
+                  if (currentSection === sections.length - 2) {
+                    handleSubmit();
+                  } else {
+                    setCurrentSection(prev => prev + 1);
+                  }
+                }}
                 disabled={!isSectionComplete(currentSection)}
                 className="px-6 py-2 bg-gradient-to-r from-blue-600 to-indigo-600 text-white rounded-lg font-medium hover:from-blue-700 hover:to-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
               >
-                {currentSection === sections.length - 2 ? 'See Results' : 'Next'}
+                {currentSection === sections.length - 2 ? 'See My Results ✨' : 'Next'}
               </button>
             ) : (
-              <button
-                onClick={handleSubmit}
-                className="px-6 py-2 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-lg font-medium hover:from-green-700 hover:to-emerald-700 transition-all"
-              >
-                Submit Assessment
-              </button>
+              <div className="px-6 py-2 bg-gradient-to-r from-green-100 to-emerald-100 text-green-700 rounded-lg font-medium border border-green-300">
+                {submitError ? '⚠️ Submission error — check console' : '✅ Assessment submitted!'}
+              </div>
             )}
           </div>
         </div>
