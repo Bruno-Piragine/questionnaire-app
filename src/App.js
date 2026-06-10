@@ -388,7 +388,7 @@ const ResultsSection = ({ formData, scores }) => {
 
       {/* CTAs */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, marginBottom: 20 }}>
-        <a href="https://humantraitlab.gumroad.com/l/standard" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+        <a href={GUMROAD_STANDARD} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
           <button style={{
             width: '100%', padding: '16px', borderRadius: T.radius.md,
             background: T.color.primary, color: '#fff', border: 'none',
@@ -398,7 +398,7 @@ const ResultsSection = ({ formData, scores }) => {
             Get Complete Analysis (15–20 pages) — $27
           </button>
         </a>
-        <a href="https://humantraitlab.gumroad.com/l/premium" target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
+        <a href={GUMROAD_PREMIUM} target="_blank" rel="noopener noreferrer" style={{ textDecoration: 'none' }}>
           <button style={{
             width: '100%', padding: '16px', borderRadius: T.radius.md,
             background: T.color.bgSurface, color: T.color.primary,
@@ -418,9 +418,14 @@ const ResultsSection = ({ formData, scores }) => {
   );
 };
 
+// ─── Gumroad URLs — ATUALIZE COM SUAS URLs REAIS ─────────────────
+const GUMROAD_STANDARD = 'https://humantraitlab.gumroad.com/l/standard';
+const GUMROAD_PREMIUM  = 'https://humantraitlab.gumroad.com/l/premium';
+
 // ─── Main App ─────────────────────────────────────────────────────
 function App() {
   const [currentSection, setCurrentSection] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState({ name: '', email: '', age: '', occupation: '' });
   const [scores, setScores] = useState({
     head:  { E: 0, O: 0, P: 0, M: 0, R: 0 },
@@ -443,6 +448,9 @@ function App() {
   const progress = Math.round(((currentSection + 1) / totalSections) * 100);
 
   const handleSubmit = async () => {
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
     const totals = { E: 0, O: 0, P: 0, M: 0, R: 0 };
     Object.values(scores).forEach(bp => Object.entries(bp).forEach(([t, v]) => { totals[t] += v; }));
     const percentages = {};
@@ -462,6 +470,8 @@ function App() {
     } catch (err) {
       console.error('Erro:', err);
       alert('There was an error submitting your assessment. Please try again.');
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -526,8 +536,8 @@ function App() {
                 ← Back
               </Button>
               {isLastBeforeResults ? (
-                <Button onClick={handleSubmit} disabled={!isSectionComplete(currentSection)}>
-                  See My Results →
+                <Button onClick={handleSubmit} disabled={!isSectionComplete(currentSection) || isSubmitting}>
+                  {isSubmitting ? 'Submitting…' : 'See My Results →'}
                 </Button>
               ) : (
                 <Button onClick={() => setCurrentSection(p => p + 1)} disabled={!isSectionComplete(currentSection)}>
